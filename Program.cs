@@ -49,8 +49,14 @@ Example Usage:
 
     - Scenario, rename
 
-    dirdiff -mode renmob -src C:\Projects(NAS)\CNC_LowRider\assets\drag-race\in -dest C:\Projects(NAS)\CNC_LowRider\assets\drag-race\out
-    dirdiff -mode dedupe -src_only F:\ -match_content -minMb 10
+        dirdiff -mode renmob -src C:\Projects(NAS)\CNC_LowRider\assets\drag-race\in -dest C:\Projects(NAS)\CNC_LowRider\assets\drag-race\out
+    
+    - Scenario, find, but DO NOT delete, files with duplicate content (regardless of filename) 
+      over 1Mb or 10Mb. Also pass -del_dupe_src flag to actually delete...
+
+        dirdiff -mode dedupe -src_only F:\ -match_content -minMb 1
+        dirdiff -mode dedupe -src_only F:\ -match_content -minMb 10
+
 ";
 
         private const int Mb = 1024 * 1024;
