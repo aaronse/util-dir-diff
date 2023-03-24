@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DirDiff": {
+      "commandName": "Project",
+      "commandLineArgs": "-mode dedupe -src_only F:\\ -match_content -minMb 10"
+    }
+  }
+}
