@@ -2,7 +2,7 @@
   "profiles": {
     "DirDiff": {
       "commandName": "Project",
-      "commandLineArgs": "-mode dedupe -src_only F:\\ -match_content -minMb 10"
+      "commandLineArgs": "-mode dedupe -src_only C:\\Projects(NAS)\\CNC_LowRider\\ -match_content -minMb 100"
     }
   }
 }

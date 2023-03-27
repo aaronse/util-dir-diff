@@ -7,6 +7,8 @@ using System.Text.RegularExpressions;
 
 namespace DirDiff
 {
+    // TODO:P0:Delete the older file with dup content if file was renamed.  *BUT* ensure common tiny template files are not deleted.
+
     /// <summary>
     /// Utility app to purge source input files that already exist somewhere in 
     /// target directory(s).  Created to reduce time to organize files being added 
@@ -60,7 +62,11 @@ Example Usage:
 ";
 
         private const int Mb = 1024 * 1024;
-                                   
+
+        private static int s_fileCompare2Calls = 0;
+        private static int s_fileCompare2Fails = 0;
+
+
         #region Common Cmd line app stuff
 
         Dictionary<string, string> _args = new Dictionary<string, string>();
@@ -324,20 +330,20 @@ Example Usage:
                             continue;
                         }
 
-                        // Skip files with different content
-                        if (isMatchingContent)
-                        {
-                            if (!FileCompare2(destFilePath, srcFilePath))
-                            {
-                                continue;
-                            }
-                        }
-
                         // Skip small files
                         if (minSizeMb > 0)
                         {
                             FileInfo srcFileInfo = new FileInfo(srcFilePath);
                             if (srcFileInfo.Length < minSizeMb * Mb)
+                            {
+                                continue;
+                            }
+                        }
+
+                        // Skip files with different content
+                        if (isMatchingContent)
+                        {
+                            if (!FileCompare2(destFilePath, srcFilePath))
                             {
                                 continue;
                             }
@@ -489,14 +495,16 @@ Example Usage:
                 }
                 else
                 {
-
                     Log.Info($"{dupeFileLengthMb} MB \"{dupeFile}\" => \"{dupeFilePaths[dupeFile]}\"");
                 }
             }
 
+            int fileCompareFailRatio = (int)Math.Round((100.0 * s_fileCompare2Fails) / s_fileCompare2Calls, 2);
+
             Log.Info($"Duplicate data summary:");
             Log.Info($"- Dupe files... {dupeFilePaths.Count}/{srcFilePaths.Length}");
             Log.Info($"- Dupe data...  {totalDupeBytes / Mb} MB");
+            Log.Info($"- File Compare fails...  ratio: {fileCompareFailRatio} %, fails: {s_fileCompare2Fails}, calls: {s_fileCompare2Calls}");
 
         }
 
@@ -558,8 +566,9 @@ Example Usage:
 
         const int BYTES_TO_READ = sizeof(Int64);
 
-        private bool FileCompare2(string file1, string file2)
+        private bool FileCompare2(string file1, string file2, bool catchCloudExceptions = true)
         {
+            s_fileCompare2Calls++;
             FileInfo first = new FileInfo(file1);
             FileInfo second = new FileInfo(file2);
 
@@ -581,9 +590,22 @@ Example Usage:
 
                 for (int i = 0; i < iterations; i++)
                 {
-                    fs1.Read(one, 0, BYTES_TO_READ);
-                    fs2.Read(two, 0, BYTES_TO_READ);
-                    
+                    try
+                    {
+                        fs1.Read(one, 0, BYTES_TO_READ);
+                        fs2.Read(two, 0, BYTES_TO_READ);
+                    }
+                    catch (IOException ioe)
+                    {
+                        if (catchCloudExceptions && ioe.Message.IndexOf("The cloud operation was unsuccessful") != -1)
+                        {
+                            Log.Info($"FileCompare2 fail, file1={file1}, file2={file2}");
+                            s_fileCompare2Fails++;
+                            return false;
+                        }
+
+                        throw;
+                    }
 
                     if (BitConverter.ToInt64(one, 0) != BitConverter.ToInt64(two, 0))
                         return false;
